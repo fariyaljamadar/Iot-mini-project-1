@@ -1,0 +1,5 @@
+Test accuracy : 94.62 %
+Confusion     : TP=384 TN=373 FP=20 FN=23
+Weights       : {'motion': 2.7241, 'temperature': 1.4184, 'humidity': 1.5502, 'lux': 0.5685}
+Bias          : 0.0083
+Note: trained on SYNTHETIC data; accuracy reflects the simulated dataset only.

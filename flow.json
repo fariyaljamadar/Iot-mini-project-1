@@ -1,0 +1,388 @@
+[
+  {
+    "id": "tab_classroom",
+    "type": "tab",
+    "label": "Smart Classroom",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "mqtt_broker_1",
+    "type": "mqtt-broker",
+    "name": "HiveMQ public",
+    "broker": "broker.hivemq.com",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true
+  },
+  {
+    "id": "ui_tab_1",
+    "type": "ui_tab",
+    "name": "Smart Classroom",
+    "icon": "dashboard",
+    "order": 1
+  },
+  {
+    "id": "ui_base_1",
+    "type": "ui_base",
+    "theme": {
+      "name": "theme-light",
+      "lightTheme": {
+        "default": "#0094CE",
+        "baseColor": "#0094CE",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": false
+      },
+      "angularTheme": {
+        "primary": "indigo",
+        "accents": "blue",
+        "warn": "red",
+        "background": "grey",
+        "palette": "light"
+      }
+    },
+    "site": {
+      "name": "Smart Classroom Dashboard",
+      "hideToolbar": "false",
+      "allowSwipe": "false",
+      "lockMenu": "false",
+      "allowTempTheme": "true",
+      "dateFormat": "DD/MM/YYYY",
+      "sizes": {
+        "sx": 48,
+        "sy": 48,
+        "gx": 6,
+        "gy": 6,
+        "cx": 6,
+        "cy": 6,
+        "px": 0,
+        "py": 0
+      }
+    }
+  },
+  {
+    "id": "ui_grp_1",
+    "type": "ui_group",
+    "name": "Classroom 1",
+    "tab": "ui_tab_1",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_classroom",
+    "name": "classroom/data",
+    "topic": "classroom/data",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "mqtt_broker_1",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 130,
+    "y": 200,
+    "wires": [
+      [
+        "json1"
+      ]
+    ]
+  },
+  {
+    "id": "json1",
+    "type": "json",
+    "z": "tab_classroom",
+    "name": "parse JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 310,
+    "y": 200,
+    "wires": [
+      [
+        "func1"
+      ]
+    ]
+  },
+  {
+    "id": "func1",
+    "type": "function",
+    "z": "tab_classroom",
+    "name": "Process & decide",
+    "func": "// Input: JSON from classroom/data -> {people,temp,hum,lux,light,fan,confidence,mode}\nconst d = msg.payload;\nconst occupied = d.people > 0;\nconst now = Date.now();\n\nconst m1 = { payload: d.temp };\nconst m2 = { payload: d.hum };\nconst m3 = { payload: d.lux };\nconst m4 = { payload: (occupied ? \"OCCUPIED\" : \"EMPTY\") + \" (AI confidence \" + d.confidence + \"%)\" };\nconst m5 = { payload: \"Light: \" + (d.light ? \"ON\" : \"OFF\") + \" | Fan: \" + (d.fan ? \"ON\" : \"OFF\") + \" | Mode: \" + d.mode };\nconst m6 = { topic: \"Occupancy\", payload: occupied ? 1 : 0 };\n\n// Safety rule: if the room is EMPTY but an appliance is still ON, ask the ESP32 to switch it OFF\nlet action = \"NONE\";\nif (!occupied && d.mode === \"auto\" && (d.light || d.fan)) { action = \"FORCE_OFF\"; }\nconst m7 = { payload: { action: action } };\n\nreturn [m1, m2, m3, m4, m5, m6, m7];",
+    "outputs": 7,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 500,
+    "y": 200,
+    "wires": [
+      [
+        "ui_temp"
+      ],
+      [
+        "ui_hum"
+      ],
+      [
+        "ui_lux"
+      ],
+      [
+        "ui_occ"
+      ],
+      [
+        "ui_app"
+      ],
+      [
+        "ui_trend"
+      ],
+      [
+        "switch1"
+      ]
+    ]
+  },
+  {
+    "id": "ui_temp",
+    "type": "ui_gauge",
+    "z": "tab_classroom",
+    "name": "Temperature",
+    "group": "ui_grp_1",
+    "order": 1,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Temperature",
+    "label": "°C",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 50,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "x": 760,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "ui_hum",
+    "type": "ui_gauge",
+    "z": "tab_classroom",
+    "name": "Humidity",
+    "group": "ui_grp_1",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Humidity",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 100,
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "x": 750,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "ui_lux",
+    "type": "ui_gauge",
+    "z": "tab_classroom",
+    "name": "Light level",
+    "group": "ui_grp_1",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gage",
+    "title": "Light level",
+    "label": "lux",
+    "format": "{{value}}",
+    "min": 0,
+    "max": 1000,
+    "colors": [
+      "#ca3838",
+      "#e6e600",
+      "#00b500"
+    ],
+    "seg1": "",
+    "seg2": "",
+    "x": 750,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "ui_occ",
+    "type": "ui_text",
+    "z": "tab_classroom",
+    "group": "ui_grp_1",
+    "order": 4,
+    "width": 6,
+    "height": 1,
+    "name": "Occupancy",
+    "label": "Occupancy",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 760,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "ui_app",
+    "type": "ui_text",
+    "z": "tab_classroom",
+    "group": "ui_grp_1",
+    "order": 5,
+    "width": 6,
+    "height": 1,
+    "name": "Appliance status",
+    "label": "Appliances",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "x": 770,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "ui_trend",
+    "type": "ui_chart",
+    "z": "tab_classroom",
+    "name": "Occupancy trend",
+    "group": "ui_grp_1",
+    "order": 6,
+    "width": 6,
+    "height": 4,
+    "label": "Occupancy trend (1 = occupied)",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "step",
+    "nodata": "Waiting for data",
+    "dot": false,
+    "ymin": "0",
+    "ymax": "1",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4",
+      "#aec7e8",
+      "#ff7f0e",
+      "#2ca02c",
+      "#98df8a",
+      "#d62728",
+      "#ff9896",
+      "#9467bd",
+      "#c5b0d5"
+    ],
+    "outputs": 1,
+    "useDifferentColor": false,
+    "x": 770,
+    "y": 260,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "switch1",
+    "type": "switch",
+    "z": "tab_classroom",
+    "name": "needs OFF command?",
+    "property": "payload.action",
+    "propertyType": "msg",
+    "rules": [
+      {
+        "t": "eq",
+        "v": "FORCE_OFF",
+        "vt": "str"
+      }
+    ],
+    "checkall": "true",
+    "repair": false,
+    "outputs": 1,
+    "x": 770,
+    "y": 320,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_out",
+    "type": "mqtt out",
+    "z": "tab_classroom",
+    "name": "classroom/control",
+    "topic": "classroom/control",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker_1",
+    "x": 1000,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "ui_manual",
+    "type": "ui_switch",
+    "z": "tab_classroom",
+    "name": "Manual override",
+    "label": "Manual override (light + fan ON)",
+    "tooltip": "",
+    "group": "ui_grp_1",
+    "order": 7,
+    "width": 6,
+    "height": 1,
+    "passthru": false,
+    "decouple": "false",
+    "topic": "",
+    "style": "",
+    "onvalue": "{\"mode\":\"manual\",\"light\":1,\"fan\":1}",
+    "onvalueType": "json",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "{\"mode\":\"auto\"}",
+    "offvalueType": "json",
+    "officon": "",
+    "offcolor": "",
+    "animate": false,
+    "x": 140,
+    "y": 360,
+    "wires": [
+      [
+        "mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "note1",
+    "type": "comment",
+    "z": "tab_classroom",
+    "name": "MQTT in -> json -> function -> switch -> MQTT out | dashboard: http://localhost:1880/ui",
+    "info": "",
+    "x": 330,
+    "y": 120,
+    "wires": []
+  }
+]
